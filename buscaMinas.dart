@@ -46,6 +46,7 @@ int minesTotals = 8;
 int minesRestants = 8;
 int banderas = 0;
 bool trampas = false;
+bool esPrimeraJugada = true;
 
 void enterraMines() {
   Random random = Random();
@@ -106,35 +107,118 @@ void printaTaulers() {
   }
 }
 
-void destapaCasella() {
-  stdout.write("Introdueix la casella (ex: A5): ");
-  String? casella = stdin.readLineSync();
-
-  while (casella!.length != 2 ||
-      !filaIndices.keys.contains(casella[0].toUpperCase()) ||
-      !nums.contains(casella[1])) {
-    print("Coordenades invalides!");
-
-    stdout.write("Introdueix la casella (ex: A5): ");
-    casella = stdin.readLineSync();
+bool destapaCasellaRecursiva(
+    int x, int y, bool esPrimeraJugada, bool esJugadaUsuari) {
+  // Verifica si las coordenadas están fuera del tablero o si la casilla ya está descubierta
+  if (x < 1 ||
+      x >= matriu.length ||
+      y < 1 ||
+      y >= matriu[0].length ||
+      matriu[x][y] != "·" ||
+      matriu[x][y] == "F") {
+    return false;
   }
-  // Convertir la fila y columna a índices
-  int fila = filaIndices[casella[0].toUpperCase()]!;
-  int columna = int.parse(casella[1]) + 1;
 
-  if (esMina(fila, columna)) {
-    derrota = true;
+  // Verifica si la casilla contiene una mina
+  if (matriuMines[x][y] == "#") {
+    if (esPrimeraJugada) {
+      mouBomba(x, y);
+      return destapaCasellaRecursiva(x, y, false, esJugadaUsuari);
+    } else if (esJugadaUsuari) {
+      return true; // Explosión
+    } else {
+      return false; // No explota durante la recursividad
+    }
+  }
+
+  // Cuenta las minas adyacentes
+  int numMines = comptaMinesAdjacents(x, y);
+  matriu[x][y] = numMines == 0 ? " " : numMines;
+
+  // Si no hay minas alrededor, destapa las casillas adyacentes
+  if (numMines == 0) {
+    for (int dx = -1; dx <= 1; dx++) {
+      for (int dy = -1; dy <= 1; dy++) {
+        if (dx != 0 || dy != 0) {
+          destapaCasellaRecursiva(x + dx, y + dy, false, false);
+        }
+      }
+    }
+  }
+
+  return false; // No explota
+}
+
+void mouBomba(int x, int y) {
+  matriuMines[x][y] = "·"; // Elimina la bomba de la casilla actual
+  Random random = Random();
+
+  // Encuentra una posición vacía aleatoria
+  List<List<int>> posicionsBuides = [];
+  for (int i = 1; i < matriuMines.length; i++) {
+    for (int j = 1; j < matriuMines[i].length; j++) {
+      if (matriuMines[i][j] != "#" && matriu[i][j] == "·") {
+        posicionsBuides.add([i, j]);
+      }
+    }
+  }
+
+  if (posicionsBuides.isNotEmpty) {
+    posicionsBuides.shuffle();
+    List<int> novaPosicio = posicionsBuides.first;
+    matriuMines[novaPosicio[0]][novaPosicio[1]] = "#";
   }
 }
 
-bool esMina(fila, columna) {
-  bool mina = false;
-
-  if (matriuMines[fila][columna] == "#") {
-    mina = true;
+int comptaMinesAdjacents(int x, int y) {
+  int count = 0;
+  for (int dx = -1; dx <= 1; dx++) {
+    for (int dy = -1; dy <= 1; dy++) {
+      int nx = x + dx;
+      int ny = y + dy;
+      if (nx >= 1 &&
+          nx < matriuMines.length &&
+          ny >= 1 &&
+          ny < matriuMines[0].length &&
+          matriuMines[nx][ny] == "#") {
+        count++;
+      }
+    }
   }
+  return count;
+}
 
-  return mina;
+void posaBanderas() {
+  stdout.write("Introdueix la casella (ex: A5): ");
+  String? casella = stdin.readLineSync();
+  bool banderaOk = false;
+  while (!banderaOk) {
+    while (casella!.length != 2 ||
+        !filaIndices.keys.contains(casella[0].toUpperCase()) ||
+        !nums.contains(casella[1])) {
+      print("Coordenades invalides!");
+
+      stdout.write("Introdueix la casella (ex: A5): ");
+      casella = stdin.readLineSync();
+    }
+    // Convertir la fila y columna a índices
+    int fila = filaIndices[casella[0].toUpperCase()]!;
+    int columna = int.parse(casella[1]) + 1;
+
+    print("ANTES DE WHILE");
+    print("-${matriu[fila][columna]}-");
+
+    if (matriu[fila][columna] == " ") {
+      print("La casella no pot estar buida!");
+    } else if (matriu[fila][columna] == "F") {
+      matriu[fila][columna] = "·";
+      banderaOk = true;
+    } else {
+      matriu[fila][columna] = "F";
+      banderaOk = true;
+    }
+    casella = "";
+  }
 }
 
 bool derrota = false;
@@ -154,13 +238,37 @@ Future<void> main() async {
       case "1":
       case "escollir casella":
       case "casella":
-        destapaCasella();
+        stdout.write("Introdueix la casella (ex: A5): ");
+        String? casella = stdin.readLineSync();
+
+        while (casella!.length != 2 ||
+            !filaIndices.keys.contains(casella[0].toUpperCase()) ||
+            !nums.contains(casella[1])) {
+          print("Coordenades invalides!");
+
+          stdout.write("Introdueix la casella (ex: A5): ");
+          casella = stdin.readLineSync();
+        }
+        // Convertir la fila y columna a índices
+        int fila = filaIndices[casella[0].toUpperCase()]!;
+        int columna = int.parse(casella[1]) + 1;
+
+        if (destapaCasellaRecursiva(fila, columna, esPrimeraJugada, true)) {
+          print("Has destapat una mina! Has perdut.");
+          derrota = true;
+        }
+
+        if (esPrimeraJugada) {
+          esPrimeraJugada = false;
+        }
+
         break;
 
       case "2":
       case "posar bandera":
       case "bandera":
       case "flag":
+        posaBanderas();
         break;
 
       case "3":
