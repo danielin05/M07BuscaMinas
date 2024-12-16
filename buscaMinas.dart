@@ -21,6 +21,7 @@ List<List<dynamic>> matriuMines = [
   ["F", "·", "·", "·", "·", "·", "·", "·", "·", "·", "·"]
 ];
 
+List nums = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 Map<String, int> filaIndices = {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5, "F": 6};
 
 const menu = """
@@ -34,8 +35,8 @@ const menu = """
 
 const menuAjuda = """
 ------ MENU AJUDA ------
-Les opcions: 1, escollir casella. ----> Escribint una casella (D2, A8, etc) destapes una casella
-Les opcions: 2, posar bandera. ----> Escribint una casella (D2, A8, etc) poses una bandera.
+Les opcions: 1, escollir casella, casella. ----> Escribint una casella (D2, A8, etc) destapes una casella
+Les opcions: 2, posar bandera, bandera, flag. ----> Escribint una casella (D2, A8, etc) poses una bandera.
 Les opcions: 3, trampa, cheats. ----> Mostra el taulell amb les mines destapades.
 Les opcions: 4, ajuda, help. ----> Son per mostrar aquest menu d'ajuda
 Les opcions: 0, sortir, exit. ----> Serveixen per sortir del joc.
@@ -45,8 +46,6 @@ int minesTotals = 8;
 int minesRestants = 8;
 int banderas = 0;
 bool trampas = false;
-List lletres = ["A", "B", "C", "D", "E", "F"];
-List nums = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 void enterraMines() {
   Random random = Random();
@@ -89,39 +88,104 @@ void enterraMines() {
 }
 
 void printaTaulers() {
-  print(
-      "\n------- TAULELL -------           ------- TAULELL DESTAPAT -------\n");
-  for (int i = 0; i < matriu.length; i++) {
-    String filaMatriu = matriu[i].join(" ");
-    String filaTresors = matriuMines[i].join(" ");
-    print(filaMatriu + "                  " + filaTresors);
+  if (trampas) {
+    print(
+        "\n------- TAULELL -------           ------- TAULELL DESTAPAT -------\n");
+    for (int i = 0; i < matriu.length; i++) {
+      String filaMatriu = matriu[i].join(" ");
+      String filaTresors = matriuMines[i].join(" ");
+      print(filaMatriu + "                  " + filaTresors);
+    }
+    print("");
+  } else {
+    print("\n------- TAULELL -------\n");
+    for (var fila in matriu) {
+      print(fila.join(" "));
+    }
+    print("");
   }
-  print("");
 }
 
-bool destapaCasella() {
-  bool destapa = false;
-
+void destapaCasella() {
   stdout.write("Introdueix la casella (ex: A5): ");
   String? casella = stdin.readLineSync();
 
   while (casella!.length != 2 ||
-      !lletres.contains(casella[0].toUpperCase()) ||
+      !filaIndices.keys.contains(casella[0].toUpperCase()) ||
       !nums.contains(casella[1])) {
     print("Coordenades invalides!");
 
     stdout.write("Introdueix la casella (ex: A5): ");
     casella = stdin.readLineSync();
   }
+  // Convertir la fila y columna a índices
+  int fila = filaIndices[casella[0].toUpperCase()]!;
+  int columna = int.parse(casella[1]) + 1;
 
-  print("X: " + casella[0] + " Y: " + casella[1]);
-
-  return destapa;
+  if (esMina(fila, columna)) {
+    derrota = true;
+  }
 }
 
+bool esMina(fila, columna) {
+  bool mina = false;
+
+  if (matriuMines[fila][columna] == "#") {
+    mina = true;
+  }
+
+  return mina;
+}
+
+bool derrota = false;
+bool victoria = false;
+bool exit = false;
+
 Future<void> main() async {
-  printaTaulers();
   enterraMines();
-  printaTaulers();
-  destapaCasella();
+
+  while (!exit && !derrota && !victoria) {
+    printaTaulers();
+    print(menu);
+    stdout.write("Opcio: ");
+    String opcion = stdin.readLineSync()!.toLowerCase();
+
+    switch (opcion) {
+      case "1":
+      case "escollir casella":
+      case "casella":
+        destapaCasella();
+        break;
+
+      case "2":
+      case "posar bandera":
+      case "bandera":
+      case "flag":
+        break;
+
+      case "3":
+      case "trampa":
+      case "cheat":
+        trampas = !trampas;
+        break;
+
+      case "4":
+      case "ajuda":
+      case "help":
+        print(menuAjuda);
+        stdout.write("Press Enter to continue");
+        stdin.readLineSync();
+        break;
+
+      case "0":
+      case "sortir":
+      case "exit":
+      case "salir":
+        print("¡Hasta la próxima!");
+        exit = true;
+        break;
+      default:
+        print("¡Opción inválida!");
+    }
+  }
 }
