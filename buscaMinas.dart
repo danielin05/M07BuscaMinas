@@ -42,6 +42,7 @@ Les opcions: 4, ajuda, help. ----> Son per mostrar aquest menu d'ajuda
 Les opcions: 0, sortir, exit. ----> Serveixen per sortir del joc.
 """;
 
+int casellesTotals = 60;
 int minesTotals = 8;
 int minesRestants = 8;
 int banderas = 0;
@@ -114,8 +115,8 @@ bool destapaCasellaRecursiva(
       x >= matriu.length ||
       y < 1 ||
       y >= matriu[0].length ||
-      matriu[x][y] != "·" ||
-      matriu[x][y] == "F") {
+      matriu[x][y] != "·") {
+    print("Aquesta casella ya esta descoberta");
     return false;
   }
 
@@ -133,7 +134,12 @@ bool destapaCasellaRecursiva(
 
   // Cuenta las minas adyacentes
   int numMines = comptaMinesAdjacents(x, y);
-  matriu[x][y] = numMines == 0 ? " " : numMines;
+
+  if (numMines == 0) {
+    matriu[x][y] = " ";
+  } else {
+    matriu[x][y] = numMines;
+  }
 
   // Si no hay minas alrededor, destapa las casillas adyacentes
   if (numMines == 0) {
@@ -189,10 +195,10 @@ int comptaMinesAdjacents(int x, int y) {
 }
 
 void posaBanderas() {
-  stdout.write("Introdueix la casella (ex: A5): ");
-  String? casella = stdin.readLineSync();
   bool banderaOk = false;
   while (!banderaOk) {
+    stdout.write("Introdueix la casella (ex: A5): ");
+    String? casella = stdin.readLineSync();
     while (casella!.length != 2 ||
         !filaIndices.keys.contains(casella[0].toUpperCase()) ||
         !nums.contains(casella[1])) {
@@ -205,9 +211,6 @@ void posaBanderas() {
     int fila = filaIndices[casella[0].toUpperCase()]!;
     int columna = int.parse(casella[1]) + 1;
 
-    print("ANTES DE WHILE");
-    print("-${matriu[fila][columna]}-");
-
     if (matriu[fila][columna] == " ") {
       print("La casella no pot estar buida!");
     } else if (matriu[fila][columna] == "F") {
@@ -218,6 +221,24 @@ void posaBanderas() {
       banderaOk = true;
     }
     casella = "";
+  }
+}
+
+bool checkVictory() {
+  int destapades = 0;
+  for (int i = 1; i < 7; i++) {
+    for (int x = 1; x < 11; x++) {
+      if (matriu[i][x] == " " ||
+          [1, 2, 3, 4, 5, 6, 7, 8].contains(matriu[i][x])) {
+        destapades++;
+      }
+    }
+  }
+
+  if (destapades == casellesTotals - minesTotals) {
+    return true;
+  } else {
+    return false;
   }
 }
 
@@ -260,6 +281,11 @@ Future<void> main() async {
 
         if (esPrimeraJugada) {
           esPrimeraJugada = false;
+        }
+
+        if (checkVictory()) {
+          print("Felicitats! Has guanyat.");
+          victoria = true;
         }
 
         break;
